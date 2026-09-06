@@ -1,0 +1,21 @@
+name: 'AI Code Sanitizer'
+description: 'Scans Android projects for leaked secrets and AI-hallucinated dependencies.'
+author: 'AI-Code-Sanitizer Team'
+
+inputs:
+  scan_dir:
+    description: 'Directory to scan (default is current workspace)'
+    required: false
+    default: '.'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Run Python Sanitizer Script
+      run: python ${{ github.action_path }}/sanitizer.py ${{ inputs.scan_dir }}
+      shell: bash

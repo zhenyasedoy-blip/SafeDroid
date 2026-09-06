@@ -1,0 +1,21 @@
+name: Android Security & Hallucination Check
+
+on:
+  push:
+    branches: [ "main", "master", "develop" ]
+  pull_request:
+    branches: [ "main", "master", "develop" ]
+
+jobs:
+  ai_sanitizer_job:
+    name: Run AI-Code-Sanitizer
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Run AI-Sanitizer Action
+        uses: ./.github/actions/ai-sanitizer
+        with:
+          scan_dir: '.'
