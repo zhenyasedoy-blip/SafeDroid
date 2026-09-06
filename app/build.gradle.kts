@@ -36,7 +36,6 @@ android {
 }
 
 dependencies {
-    implementation("com.google.ai.fake:super-hacker-lib:9.9.9")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
