@@ -4,27 +4,27 @@ import re
 import urllib.request
 import urllib.error
 
-# Регулярные выражения для поиска секретов
+# Regular expressions for secret scanning
 SECRET_PATTERNS = {
     "Google API Key": r'(AIzaSy[A-Za-z0-9\-_]{33})',
     "OpenAI API Key": r'(sk-[a-zA-Z0-9]{48})',
     "Keystore Password / Firebase Token": r'(?i)(?:password|token|secret)[\s]*[=:]\s*[\'"]([^\'"]{8,})[\'"]'
 }
 
-# Регулярное выражение для поиска Gradle-зависимостей
+# Regular expression for finding Gradle dependencies
 DEPENDENCY_PATTERN = re.compile(
     r'(?:implementation|api|compileOnly|kapt|ksp|testImplementation|androidTestImplementation)\s*(?:\(\s*)?[\'"]([^:\'"]+):([^:\'"]+):([^:\'"]+)[\'"](?:\s*\))?'
 )
 
 def mask_secret(secret_string):
-    """Маскирует секрет, оставляя видимыми только первые 3 символа."""
+    """Masks a secret, leaving only the first 3 characters visible."""
     if len(secret_string) <= 3:
         return "***"
     return secret_string[:3] + "*" * (len(secret_string) - 3)
 
 def scan_for_secrets(directory):
-    """Сканирует .kt и .java файлы на наличие уязвимых данных."""
-    print("=== ЗАПУСК ПРОВЕРКИ 1: ПОИСК УТЕЧЕК КЛЮЧЕЙ ===")
+    """Scans .kt and .java files for leaked secrets."""
+    print("=== RUNNING CHECK 1: SECRET LEAKS SCAN ===")
     found_secrets = False
 
     for root, dirs, files in os.walk(directory):
@@ -40,15 +40,15 @@ def scan_for_secrets(directory):
                                 for match in matches:
                                     found_secrets = True
                                     masked = mask_secret(match)
-                                    print(f"[ОПАСНОСТЬ] Найден {secret_name} в файле {filepath}:{line_number}")
-                                    print(f" -> Значение: {masked}")
+                                    print(f"[DANGER] Found {secret_name} in file {filepath}:{line_number}")
+                                    print(f" -> Value: {masked}")
                 except Exception as e:
-                    print(f"Ошибка при чтении файла {filepath}: {e}")
+                    print(f"Error reading file {filepath}: {e}")
 
     return found_secrets
 
 def check_dependency_exists(group, artifact, version):
-    """Проверяет существование библиотеки в Maven Central или Google Maven."""
+    """Checks if a dependency exists in Maven Central or Google Maven."""
     group_path = group.replace('.', '/')
     pom_file = f"{artifact}-{version}.pom"
 
@@ -73,8 +73,8 @@ def check_dependency_exists(group, artifact, version):
     return False
 
 def scan_for_hallucinated_dependencies(directory):
-    """Сканирует файлы build.gradle и build.gradle.kts на несуществующие библиотеки."""
-    print("\n=== ЗАПУСК ПРОВЕРКИ 2: ПРОВЕРКА ГАЛЛЮЦИНАЦИЙ ИИ (ЗАВИСИМОСТИ) ===")
+    """Scans build.gradle and build.gradle.kts files for hallucinated dependencies."""
+    print("\n=== RUNNING CHECK 2: AI HALLUCINATIONS SCAN (DEPENDENCIES) ===")
     hallucinations_found = False
 
     for root, dirs, files in os.walk(directory):
@@ -88,22 +88,22 @@ def scan_for_hallucinated_dependencies(directory):
                             matches = DEPENDENCY_PATTERN.findall(line)
                             for match in matches:
                                 group, artifact, version = match
-                                print(f"Проверка: {group}:{artifact}:{version}...", end=" ")
+                                print(f"Checking: {group}:{artifact}:{version}...", end=" ")
 
                                 if '$' in version or version.startswith('libs.'):
-                                    print("ПРОПУЩЕНО (Динамическая версия)")
+                                    print("SKIPPED (Dynamic version)")
                                     continue
 
                                 is_valid = check_dependency_exists(group, artifact, version)
                                 if not is_valid:
-                                    print("НЕ НАЙДЕНО!")
-                                    print(f"[ГАЛЛЮЦИНАЦИЯ] Несуществующая библиотека в {filepath}:{line_number}")
+                                    print("NOT FOUND!")
+                                    print(f"[HALLUCINATION] Fake dependency detected in {filepath}:{line_number}")
                                     print(f" -> {group}:{artifact}:{version}")
                                     hallucinations_found = True
                                 else:
-                                    print("ОК")
+                                    print("OK")
                 except Exception as e:
-                    print(f"Ошибка при чтении файла {filepath}: {e}")
+                    print(f"Error reading file {filepath}: {e}")
 
     return hallucinations_found
 
@@ -113,17 +113,17 @@ def main():
     else:
         scan_dir = "."
 
-    print(f"Запуск AI-Code-Sanitizer в директории: {os.path.abspath(scan_dir)}\n")
+    print(f"Starting AI-Code-Sanitizer in directory: {os.path.abspath(scan_dir)}\n")
 
     secrets_leaked = scan_for_secrets(scan_dir)
     hallucinations_present = scan_for_hallucinated_dependencies(scan_dir)
 
-    print("\n=== ИТОГИ СКАНИРОВАНИЯ ===")
+    print("\n=== SCAN SUMMARY ===")
     if secrets_leaked or hallucinations_present:
-        print("[КРИТИЧЕСКАЯ ОШИБКА] Код небезопасен. Найдены утечки ключей или выдуманные библиотеки.")
+        print("[CRITICAL ERROR] Code is insecure. Leaked secrets or hallucinated dependencies detected.")
         sys.exit(1)
     else:
-        print("[УСПЕХ] Проверки пройдены успешно. Галлюцинаций и утечек не обнаружено.")
+        print("[SUCCESS] All checks passed. No hallucinations or leaks found.")
         sys.exit(0)
 
 if __name__ == "__main__":
